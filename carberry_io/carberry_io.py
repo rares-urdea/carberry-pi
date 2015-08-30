@@ -8,7 +8,9 @@ import time
 from carberry_sensors import hex_to_int
 from utils.debug_event import debug_display
 
-GET_DTC_COMMAND   = "03"
+# Constants
+
+GET_DTC_COMMAND = "03"
 CLEAR_DTC_COMMAND = "04"
 GET_FREEZE_DTC_COMMAND = "07"
 
@@ -21,9 +23,11 @@ def decrypt_dtc_code(code):
         if len(current)<4:
             raise "Tried to decode bad DTC: %s" % code
 
-        tc = carberry_sensors.hex_to_int(current[0]) #typecode
-        tc = tc >> 2
-        if   tc == 0:
+        # type code
+        tc = carberry_sensors.hex_to_int(current[0])
+        tc >>= 2
+
+        if tc == 0:
             type = "P"
         elif tc == 1:
             type = "C"
@@ -61,8 +65,7 @@ class OBDPort:
          debug_display(self._notify_window, 1, "Opening interface (serial port)")
 
          try:
-             self.port = serial.Serial(portnum,baud, \
-             parity = par, stopbits = sb, bytesize = databits,timeout = to)
+             self.port = serial.Serial(portnum, baud, parity=par, stopbits=sb, bytesize=databits, timeout=to)
              
          except serial.SerialException as e:
              print e
@@ -117,7 +120,7 @@ class OBDPort:
              self.port.write("\r\n")
              #debug_display(self._notify_window, 3, "Send command:" + cmd)
 
-     def interpret_result(self,code):
+     def interpret_result(self, code):
          """Internal use only: not a public interface"""
          # Code will be the string returned from the device.
          # It should look something like this:
@@ -136,8 +139,8 @@ class OBDPort:
          code = string.split(code)
          code = string.join(code, "")
          
-         #cables can behave differently 
-         if code[:6] == "NODATA": # there is no such sensor
+         # there is no such sensor
+         if code[:6] == "NODATA":
              return "NODATA"
              
          # first 4 characters are code from ELM
@@ -146,7 +149,7 @@ class OBDPort:
     
      def get_result(self):
          """Internal use only: not a public interface"""
-         #time.sleep(0.01)
+
          repeat_count = 0
          if self.port is not None:
              buffer = ""
@@ -193,12 +196,12 @@ class OBDPort:
          return data
 
      # return string of sensor name and value from sensor index
-     def sensor(self , sensor_index):
+     def sensor(self, sensor_index):
          """Returns 3-tuple of given sensors. 3-tuple consists of
          (Sensor Name (string), Sensor Value (string), Sensor Unit (string) ) """
          sensor = carberry_sensors.SENSORS[sensor_index]
          r = self.get_sensor_value(sensor)
-         return (sensor.name,r, sensor.unit)
+         return sensor.name, r, sensor.unit
 
      def sensor_names(self):
          """Internal use only: not a public interface"""
@@ -208,14 +211,17 @@ class OBDPort:
          return names
          
      def get_tests_MIL(self):
-         statusText=["Unsupported","Supported - Completed","Unsupported","Supported - Incompleted"]
-         
-         statusRes = self.sensor(1)[1] #GET values
-         statusTrans = [] #translate values to text
+         statusText=["Unsupported", "Supported - Completed", "Unsupported", "Supported - Incomplete"]
+
+         #get values
+         statusRes = self.sensor(1)[1]
+
+         #translate values to text
+         statusTrans = []
          
          statusTrans.append(str(statusRes[0])) #DTCs
          
-         if statusRes[1]==0: #MIL
+         if statusRes[1] == 0: #MIL
             statusTrans.append("Off")
          else:
             statusTrans.append("On")
@@ -237,8 +243,7 @@ class OBDPort:
           dtcNumber = r[0]
           mil = r[1]
           DTCCodes = []
-          
-          
+
           print "Number of stored DTC:" + str(dtcNumber) + " MIL: " + str(mil)
           # get all DTC, 3 per mesg response
           for i in range(0, ((dtcNumber+2)/3)):
@@ -297,4 +302,3 @@ class OBDPort:
                     line = "%.6f,\t%s\n" % (now - start_time, data[1])
                     file.write(line)
                     file.flush()
-          

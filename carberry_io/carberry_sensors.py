@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 
-def hex_to_int(str):
-    i = eval("0x" + str, {}, {})
+def hex_to_int(hex_str):
+    i = eval("0x" + hex_str, {}, {})
     return i
 
 
@@ -16,7 +16,8 @@ def throttle_pos(code):
     return code * 100.0 / 255.0
 
 
-def intake_m_pres(code): # in kPa
+# measured in kPa
+def intake_m_pres(code):
     code = hex_to_int(code)
     return code / 0.14504
 
@@ -48,18 +49,17 @@ def sec_to_min(code):
 
 def temp(code):
     code = hex_to_int(code)
-    c = code - 40 
-    return 32 + (9 * c / 5) 
+    celsius = code - 40
+    return celsius
 
 
 def cpass(code):
-    #fixme
+    # TODO: this
     return code
 
 
 def fuel_trim_percent(code):
     code = hex_to_int(code)
-    #return (code - 128.0) * 100.0 / 128
     return (code - 128) * 100 / 128
 
 
@@ -72,37 +72,37 @@ def dtc_decrypt(code):
         mil = 1
     else:
         mil = 0
-        
+
     # bit 0-6 are the number of dtc's. 
     num = num & 0x7f
-    
+
     res.append(num)
     res.append(mil)
-    
+
     numB = hex_to_int(code[2:4]) #B byte
-      
-    for i in range(0,3):
-        res.append(((numB>>i)&0x01)+((numB>>(3+i))&0x02))
-    
+
+    for i in range(0, 3):
+        res.append(((numB >> i) & 0x01)+((numB >> (3+i)) & 0x02))
+
     numC = hex_to_int(code[4:6]) #C byte
     numD = hex_to_int(code[6:8]) #D byte
-       
-    for i in range(0,7):
-        res.append(((numC>>i)&0x01)+(((numD>>i)&0x01)<<1))
-    
-    res.append(((numD>>7)&0x01)) #EGR SystemC7  bit of different 
-    
+
+    for i in range(0, 7):
+        res.append(((numC >> i) & 0x01)+(((numD >> i) & 0x01) << 1))
+
+    res.append(((numD >> 7) & 0x01)) #EGR SystemC7  bit of different
+
     #return res
     return "#"
 
 
-def hex_to_bitstring(str):
+def hex_to_bitstring(hex_str):
     bitstring = ""
-    for i in str:
+    for i in hex_str:
         # silly type safety, we don't want to eval random stuff
-        if type(i) == type(''): 
+        if type('') == type(i):
             v = eval("0x%s" % i)
-            if v & 8 :
+            if v & 8:
                 bitstring += '1'
             else:
                 bitstring += '0'
@@ -117,25 +117,25 @@ def hex_to_bitstring(str):
             if v & 1:
                 bitstring += '1'
             else:
-                bitstring += '0'                
+                bitstring += '0'
     return bitstring
 
 
 class Sensor:
-    def __init__(self, shortName, sensorName, sensorcommand, sensorValueFunction, u):
-        self.shortname = shortName
-        self.name = sensorName
-        self.cmd  = sensorcommand
-        self.value= sensorValueFunction
-        self.unit = u
+    def __init__(self, short_name, sensor_name, sensor_command, sensor_value_function, unit):
+        self.short_name = short_name
+        self.name = sensor_name
+        self.cmd = sensor_command
+        self.value = sensor_value_function
+        self.unit = unit
 
 SENSORS = [
-    Sensor("pids"                  , "Supported PIDs"				, "0100" , hex_to_bitstring ,""       ), 
-    Sensor("dtc_status"            , "S-S DTC Cleared"				, "0101" , dtc_decrypt      ,""       ),    
-    Sensor("dtc_ff"                , "DTC C-F-F"					, "0102" , cpass            ,""       ),      
+    Sensor("pids"                  , "Supported PIDs"				, "0100" , hex_to_bitstring ,""       ),
+    Sensor("dtc_status"            , "S-S DTC Cleared"				, "0101" , dtc_decrypt      ,""       ),
+    Sensor("dtc_ff"                , "DTC C-F-F"					, "0102" , cpass            ,""       ),
     Sensor("fuel_status"           , "Fuel System Stat"				, "0103" , cpass            ,""       ),
     Sensor("load"                  , "Calc Load Value"				, "01041", percent_scale    ,""       ),    
-    Sensor("temp"                  , "Coolant Temp"					, "0105" , temp             ,"F"      ),
+    Sensor("temp"                  , "Coolant Temp"					, "0105" , temp             ,"C"      ),
     Sensor("short_term_fuel_trim_1", "S-T Fuel Trim"				, "0106" , fuel_trim_percent,"%"      ),
     Sensor("long_term_fuel_trim_1" , "L-T Fuel Trim"				, "0107" , fuel_trim_percent,"%"      ),
     Sensor("short_term_fuel_trim_2", "S-T Fuel Trim"				, "0108" , fuel_trim_percent,"%"      ),

@@ -1,31 +1,35 @@
 import serial
 
 
-def scanSerial():
-    """scan for available ports. return a list of serial names"""
-    available = []
- # Enable Bluetooh connection
-    try:
-        s = serial.Serial("/dev/rfcomm98")
-        available.append((str(s.port)))
-        s.close()   # explicit close 'cause of delayed GC in java
-    except serial.SerialException:
-        pass
- # Enable USB connection
+def scan_serial():
+    """Scans for available ports. returns a list of serial names"""
+    available_ports = []
+
+    # Find available Bluetooth connection
     for i in range(256):
-      try:
-        s = serial.Serial("/dev/ttyS"+str(i))
-        available.append(s.portstr)
-        s.close()   # explicit close 'cause of delayed GC in java
-      except serial.SerialException:
-        pass
- # Enable obdsim 
-    #for i in range(256):
-      #try: #scan Simulator
-        #s = serial.Serial("/dev/pts/"+str(i))
-        #available.append(s.portstr)
-        #s.close()   # explicit close 'cause of delayed GC in java
-      #except serial.SerialException:
-        #pass
+        try:
+            s = serial.Serial("/dev/rfcomm"+str(i))
+            available_ports.append((str(s.port)))
+            s.close()   # explicit close 'cause of delayed GC in java
+        except serial.SerialException:
+            pass
+
+    # On standard debian / ubuntu, the serial connection is /dev/ttyS<N> where 0 < N < 255
+    for i in range(256):
+        try:
+            s = serial.Serial("/dev/ttyS"+str(i))
+            available_ports.append(s.portstr)
+            s.close()   # explicit close 'cause of delayed GC in java
+        except serial.SerialException:
+            pass
+
+    # On raspbian it seems to be /dev/ttyUSB<N> instead
+    for i in range(256):
+        try:
+            s = serial.Serial("/dev/ttyUSB"+str(i))
+            available_ports.append(s.portstr)
+            s.close()   # explicit close 'cause of delayed GC in java
+        except serial.SerialException:
+            pass
     
-    return available
+    return available_ports

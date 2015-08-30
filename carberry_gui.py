@@ -6,18 +6,19 @@ from threading import Thread
 from carberry_io.carberry_capture import OBDCapture
 
 
-# OBD variables
-BACKGROUND_FILENAME = "elementary.jpg"
-LOGO_FILENAME 		= "car.png"
+# Constants
+SENSOR_REFRESH_TIMER = 1000
+BACKGROUND = "elementary.jpg"
+SMALL_LOGO = "car.png"
 
 
 def obd_connect(o):
     o.connect()
 
 
-class OBDConnection(object):
+class CarberryObdConnection(object):
     """
-    Class for OBD connection. Use a thread for connection.
+    Class for OBD connection. Use a thread for the connection.
     """
     
     def __init__(self):
@@ -58,7 +59,7 @@ class OBDConnection(object):
         return sensors
 
 
-class OBDText(wx.TextCtrl):
+class CarberryObdText(wx.TextCtrl):
     """
     Text display while loading OBD application.
     """
@@ -80,7 +81,7 @@ class OBDText(wx.TextCtrl):
         self.AppendText(text)
 
 
-class OBDStaticBox(wx.StaticBox):
+class CarberryObdStaticBox(wx.StaticBox):
     """
     OBD StaticBox.
     """
@@ -98,7 +99,7 @@ class OBDStaticBox(wx.StaticBox):
         dc.DrawBitmap(self.bitmap, 0, 0)     
 
 
-class OBDPanelGauges(wx.Panel):
+class CarberryObdPanelGauges(wx.Panel):
     """
     Panel for gauges.
     """
@@ -107,30 +108,30 @@ class OBDPanelGauges(wx.Panel):
         """
         Constructor.
         """
-        super(OBDPanelGauges, self).__init__(*args, **kwargs)
+        super(CarberryObdPanelGauges, self).__init__(*args, **kwargs)
 
         # Background image
-        image = wx.Image(BACKGROUND_FILENAME) 
+        image = wx.Image(BACKGROUND)
         width, height = wx.GetDisplaySize() 
         image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
         self.bitmap = wx.BitmapFromImage(image) 
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
-        # Create an accelerator table
+        # Create an accelerator table for controls
         lid = wx.NewId()
         cid = wx.NewId()
         rid = wx.NewId()
         self.Bind(wx.EVT_MENU, self.on_ctrl_c, id=cid)
         self.Bind(wx.EVT_MENU, self.on_left, id=lid)
         self.Bind(wx.EVT_MENU, self.on_right, id=rid)
-        self.accel_tbl = wx.AcceleratorTable([ 
+        self.accelerator_table = wx.AcceleratorTable([
                 (wx.ACCEL_CTRL, ord('C'), cid), 
                 (wx.ACCEL_NORMAL, wx.WXK_LEFT, lid), 
                 (wx.ACCEL_NORMAL, wx.WXK_RIGHT, rid), 
                 ])
-        self.SetAcceleratorTable(self.accel_tbl)
+        self.SetAcceleratorTable(self.accelerator_table)
 
-        # Handle events for mouse clicks
+        # Handle events for mouse clicks - to be replaced with touchscreen events
         self.Bind(wx.EVT_LEFT_DOWN, self.on_left)
         self.Bind(wx.EVT_RIGHT_DOWN, self.on_right)
         
@@ -184,61 +185,62 @@ class OBDPanelGauges(wx.Panel):
         self.texts = []
 
         # Main sizer
-        boxSizerMain = wx.BoxSizer(wx.VERTICAL)
+        main_box_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # Grid sizer
         nrows, ncols = 2, 3
         vgap, hgap = 50, 50
-        gridSizer = wx.GridSizer(nrows, ncols, vgap, hgap)
+        grid_sizer = wx.GridSizer(nrows, ncols, vgap, hgap)
 
         # Create a box for each sensor
         for index, sensor in sensors:
             
             (name, value, unit) = self.port.sensor(index)
 
-            box = OBDStaticBox(self, wx.ID_ANY)
+            box = CarberryObdStaticBox(self, wx.ID_ANY)
             self.boxes.append(box)
-            boxSizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+            box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
 
             # Text for sensor value 
-            if type(value)==float:  
-                value = str("%.2f"%round(value, 3))                    
-            t1 = wx.StaticText(parent=self, label=str(value), style=wx.ALIGN_CENTER)
-            t1.SetForegroundColour('WHITE')
+            if type(value) == float:
+                value = str("%.2f" % round(value, 3))
+
+            sensor_value_text = wx.StaticText(parent=self, label=str(value), style=wx.ALIGN_CENTER)
+            sensor_value_text.SetForegroundColour('WHITE')
             font1 = wx.Font(32, wx.ROMAN, wx.NORMAL, wx.NORMAL, faceName="Monaco")
-            t1.SetFont(font1)
-            boxSizer.Add(t1, 0, wx.ALIGN_CENTER | wx.ALL, 20)
-            boxSizer.AddStretchSpacer()
-            self.texts.append(t1)
+            sensor_value_text.SetFont(font1)
+            box_sizer.Add(sensor_value_text, 0, wx.ALIGN_CENTER | wx.ALL, 20)
+            box_sizer.AddStretchSpacer()
+            self.texts.append(sensor_value_text)
 
             # Text for sensor name
-            t2 = wx.StaticText(parent=self, label=unit+"\n"+name, style=wx.ALIGN_CENTER)
-            t2.SetForegroundColour('WHITE')
+            sensor_name_text = wx.StaticText(parent=self, label=unit+"\n"+name, style=wx.ALIGN_CENTER)
+            sensor_name_text.SetForegroundColour('WHITE')
             font2 = wx.Font(13, wx.ROMAN, wx.NORMAL, wx.BOLD, faceName="Monaco")
-            t2.SetFont(font2)
-            boxSizer.Add(t2, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-            self.texts.append(t2)
-            gridSizer.Add(boxSizer, 1, wx.EXPAND | wx.ALL)
+            sensor_name_text.SetFont(font2)
+            box_sizer.Add(sensor_name_text, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+            self.texts.append(sensor_name_text)
+            grid_sizer.Add(box_sizer, 1, wx.EXPAND | wx.ALL)
 
         # Add invisible boxes if necessary
         nsensors = len(sensors)
         for i in range(6-nsensors):
-            box = OBDStaticBox(self)
-            boxSizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+            box = CarberryObdStaticBox(self)
+            box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
             self.boxes.append(box)
             box.Show(False)
-            gridSizer.Add(boxSizer, 1, wx.EXPAND | wx.ALL)
+            grid_sizer.Add(box_sizer, 1, wx.EXPAND | wx.ALL)
            
         # Layout
-        boxSizerMain.Add(gridSizer, 1, wx.EXPAND | wx.ALL, 10)
-        self.SetSizer(boxSizerMain)
+        main_box_sizer.Add(grid_sizer, 1, wx.EXPAND | wx.ALL, 10)
+        self.SetSizer(main_box_sizer)
         self.Refresh()
         self.Layout() 
 
         # Timer for update
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.refresh, self.timer)
-        self.timer.Start(2000)
+        self.timer.Start(SENSOR_REFRESH_TIMER)
 
     def refresh(self, event):
         sensors = self.get_sensors_to_display(self.istart)
@@ -247,8 +249,8 @@ class OBDPanelGauges(wx.Panel):
         for index, sensor in sensors:
 
             (name, value, unit) = self.port.sensor(index)
-            if type(value)==float:  
-                value = str("%.2f"%round(value, 3))                    
+            if type(value) == float:
+                value = str("%.2f" % round(value, 3))
 
             if itext<len(self.texts):
                 self.texts[itext*2].SetLabel(str(value))
@@ -297,14 +299,14 @@ class OBDLoadingPanel(wx.Panel):
         super(OBDLoadingPanel, self).__init__(*args, **kwargs)
 
         # Background image
-        image = wx.Image(BACKGROUND_FILENAME) 
+        image = wx.Image(BACKGROUND)
         width, height = wx.GetDisplaySize() 
         image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
         self.bitmap = wx.BitmapFromImage(image) 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
 
         # Logo
-        bitmap = wx.Bitmap(LOGO_FILENAME)
+        bitmap = wx.Bitmap(SMALL_LOGO)
         width, height = bitmap.GetSize()
         image = wx.ImageFromBitmap(bitmap)
         image = image.Scale(width/17, height/17, wx.IMAGE_QUALITY_HIGH)
@@ -337,7 +339,7 @@ class OBDLoadingPanel(wx.Panel):
         Display the loading screen.
         """
         boxSizer = wx.BoxSizer(wx.VERTICAL)
-        self.textCtrl = OBDText(self)
+        self.textCtrl = CarberryObdText(self)
         boxSizer.Add(self.textCtrl, 1, wx.EXPAND | wx.ALL, 92)
         self.SetSizer(boxSizer)
         font3 = wx.Font(16, wx.ROMAN, wx.NORMAL, wx.NORMAL, faceName="Monaco")
@@ -354,7 +356,7 @@ class OBDLoadingPanel(wx.Panel):
             self.timer0.Stop()
 
         # Connection
-        self.c = OBDConnection()
+        self.c = CarberryObdConnection()
         self.c.connect()
         connected = False
         while not connected:
@@ -407,7 +409,7 @@ class OBDFrame(wx.Frame):
         """
         wx.Frame.__init__(self, None, wx.ID_ANY, "OBD-Pi")
 
-        image = wx.Image(BACKGROUND_FILENAME) 
+        image = wx.Image(BACKGROUND)
         width, height = wx.GetDisplaySize() 
         image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
         self.bitmap = wx.BitmapFromImage(image) 
@@ -427,7 +429,7 @@ class OBDFrame(wx.Frame):
             sensors = self.panelLoading.getSensors()
             port = self.panelLoading.getPort()
             self.panelLoading.Destroy()
-        self.panelGauges = OBDPanelGauges(self)
+        self.panelGauges = CarberryObdPanelGauges(self)
         
         if connection:
             self.panelGauges.set_connection(connection)
@@ -460,7 +462,7 @@ class InitialFrame(wx.Frame):
         """
         wx.Frame.__init__(self, None, wx.ID_ANY, "")
 
-        image = wx.Image(BACKGROUND_FILENAME) 
+        image = wx.Image(BACKGROUND)
         width, height = wx.GetDisplaySize() 
         image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
         self.bitmap = wx.BitmapFromImage(image) 
