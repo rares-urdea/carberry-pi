@@ -3,7 +3,7 @@
 import wx
 import time
 from threading import Thread
-from carberry_io.carberry_capture import OBDCapture
+from carberry_io.carberry_capture import CarberryObdCapture
 
 
 # Constants
@@ -22,7 +22,7 @@ class CarberryObdConnection(object):
     """
     
     def __init__(self):
-        self.capture = OBDCapture()
+        self.capture = CarberryObdCapture()
 
     def get_capture(self):
         return self.capture
@@ -55,19 +55,16 @@ class CarberryObdConnection(object):
     def get_sensors(self):
         sensors = []
         if self.capture:
-            sensors = self.capture.getSupportedSensorList()
+            sensors = self.capture.get_supported_sensors()
         return sensors
 
 
-class CarberryObdText(wx.TextCtrl):
+class CarberryText(wx.TextCtrl):
     """
-    Text display while loading OBD application.
+    Text displayed while loading OBDS
     """
 
     def __init__(self, parent):
-        """
-        Constructor.
-        """
         style = wx.TE_READONLY | wx.TE_MULTILINE
         wx.TextCtrl.__init__(self, parent, style=style)
 
@@ -188,9 +185,9 @@ class CarberryObdPanelGauges(wx.Panel):
         main_box_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # Grid sizer
-        nrows, ncols = 2, 3
-        vgap, hgap = 50, 50
-        grid_sizer = wx.GridSizer(nrows, ncols, vgap, hgap)
+        vertical_gap, height_gap = 50, 50
+        grid_rows, grid_cols = 2, 3
+        grid_sizer = wx.GridSizer(grid_rows, grid_cols, vertical_gap, height_gap)
 
         # Create a box for each sensor
         for index, sensor in sensors:
@@ -223,8 +220,7 @@ class CarberryObdPanelGauges(wx.Panel):
             grid_sizer.Add(box_sizer, 1, wx.EXPAND | wx.ALL)
 
         # Add invisible boxes if necessary
-        nsensors = len(sensors)
-        for i in range(6-nsensors):
+        for i in range(6-len(sensors)):
             box = CarberryObdStaticBox(self)
             box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
             self.boxes.append(box)
@@ -339,7 +335,7 @@ class OBDLoadingPanel(wx.Panel):
         Display the loading screen.
         """
         boxSizer = wx.BoxSizer(wx.VERTICAL)
-        self.textCtrl = CarberryObdText(self)
+        self.textCtrl = CarberryText(self)
         boxSizer.Add(self.textCtrl, 1, wx.EXPAND | wx.ALL, 92)
         self.SetSizer(boxSizer)
         font3 = wx.Font(16, wx.ROMAN, wx.NORMAL, wx.NORMAL, faceName="Monaco")

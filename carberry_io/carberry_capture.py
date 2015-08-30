@@ -7,7 +7,7 @@ import time
 import carberry_sensors
 
 
-class OBDCapture:
+class CarberryObdCapture:
     def __init__(self):
         self.supportedSensorList = []
         self.port = None
@@ -29,22 +29,23 @@ class OBDCapture:
     def is_connected(self):
         return self.port
         
-    def getSupportedSensorList(self):
+    def get_supported_sensors(self):
         return self.supportedSensorList 
 
     def capture_data(self):
 
         text = ""
+
         #Find supported sensors - by getting PIDs from OBD
         # its a string of binary 01010101010101 
         # 1 means the sensor is supported
-        self.supp = self.port.sensor(0)[1]
+        self.supported_sensor = self.port.sensor(0)[1]
         self.supportedSensorList = []
         self.unsupportedSensorList = []
 
         # loop through PIDs binary
-        for i in range(0, len(self.supp)):
-            if self.supp[i] == "1":
+        for i in range(0, len(self.supported_sensor)):
+            if self.supported_sensor[i] == "1":
                 # store index of sensor and sensor object
                 self.supportedSensorList.append([i+1, carberry_sensors.SENSORS[i+1]])
             else:
@@ -73,7 +74,7 @@ class OBDCapture:
 
 if __name__ == "__main__":
 
-    capture = OBDCapture()
+    capture = CarberryObdCapture()
     capture.connect()
     time.sleep(3)
     if not capture.is_connected():
