@@ -78,7 +78,7 @@ class CarberryText(wx.TextCtrl):
         self.AppendText(text)
 
 
-class CarberryObdStaticBox(wx.StaticBox):
+class CarberryStaticBox(wx.StaticBox):
     """
     OBD StaticBox.
     """
@@ -96,7 +96,7 @@ class CarberryObdStaticBox(wx.StaticBox):
         dc.DrawBitmap(self.bitmap, 0, 0)     
 
 
-class CarberryObdPanelGauges(wx.Panel):
+class CarberryPanelGauges(wx.Panel):
     """
     Panel for gauges.
     """
@@ -105,7 +105,7 @@ class CarberryObdPanelGauges(wx.Panel):
         """
         Constructor.
         """
-        super(CarberryObdPanelGauges, self).__init__(*args, **kwargs)
+        super(CarberryPanelGauges, self).__init__(*args, **kwargs)
 
         # Background image
         image = wx.Image(BACKGROUND)
@@ -194,7 +194,7 @@ class CarberryObdPanelGauges(wx.Panel):
             
             (name, value, unit) = self.port.sensor(index)
 
-            box = CarberryObdStaticBox(self, wx.ID_ANY)
+            box = CarberryStaticBox(self, wx.ID_ANY)
             self.boxes.append(box)
             box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
 
@@ -221,7 +221,7 @@ class CarberryObdPanelGauges(wx.Panel):
 
         # Add invisible boxes if necessary
         for i in range(6-len(sensors)):
-            box = CarberryObdStaticBox(self)
+            box = CarberryStaticBox(self)
             box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
             self.boxes.append(box)
             box.Show(False)
@@ -281,7 +281,7 @@ class CarberryObdPanelGauges(wx.Panel):
         dc.DrawBitmap(self.bitmap, 0, 0)     
 
 
-class OBDLoadingPanel(wx.Panel):
+class CarberryLoadingPanel(wx.Panel):
     """
     Main panel for OBD application. 
 
@@ -292,7 +292,7 @@ class OBDLoadingPanel(wx.Panel):
         """
         Constructor.
         """
-        super(OBDLoadingPanel, self).__init__(*args, **kwargs)
+        super(CarberryLoadingPanel, self).__init__(*args, **kwargs)
 
         # Background image
         image = wx.Image(BACKGROUND)
@@ -338,11 +338,10 @@ class OBDLoadingPanel(wx.Panel):
         self.textCtrl = CarberryText(self)
         boxSizer.Add(self.textCtrl, 1, wx.EXPAND | wx.ALL, 92)
         self.SetSizer(boxSizer)
-        font3 = wx.Font(16, wx.ROMAN, wx.NORMAL, wx.NORMAL, faceName="Monaco")
+        font3 = wx.Font(22, wx.ROMAN, wx.NORMAL, wx.NORMAL, faceName="Monaco")
         self.textCtrl.SetFont(font3)
-        self.textCtrl.AddText(" Opening interface (serial port)\n")     
-        self.textCtrl.AddText(" Trying to connect...\n")
-        
+        self.textCtrl.AddText(" Attempting to open serial port and connect, please wait ...\n")
+
         self.timer0 = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.connect, self.timer0)
         self.timer0.Start(1000)
@@ -367,11 +366,12 @@ class OBDLoadingPanel(wx.Panel):
             return False
         else:
             self.textCtrl.Clear()
-            #self.textCtrl.AddText(" Connected\n")
+            self.textCtrl.AddText(" Connected\n")
             port_name = self.c.get_port_name()
             if port_name:
                 self.textCtrl.AddText(" Failed Connection: " + port_name +"\n")
-                self.textCtrl.AddText(" Please hold alt & esc to view terminal.")
+                self.textCtrl.AddText(" Hold alt & esc to view terminal.")
+
             self.textCtrl.AddText(str(self.c.get_output()))
             self.sensors = self.c.get_sensors()
             self.port = self.c.get_port()
@@ -394,7 +394,7 @@ class OBDLoadingPanel(wx.Panel):
         dc.DrawBitmap(self.bitmap, 0, 0)
 
 
-class OBDFrame(wx.Frame):
+class CarberryFrame(wx.Frame):
     """
     OBD frame.
     """
@@ -411,7 +411,7 @@ class OBDFrame(wx.Frame):
         self.bitmap = wx.BitmapFromImage(image) 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
 
-        self.panelLoading = OBDLoadingPanel(self)
+        self.panelLoading = CarberryLoadingPanel(self)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.panelLoading, 1, wx.EXPAND)
         self.SetSizer(self.sizer)
@@ -425,7 +425,7 @@ class OBDFrame(wx.Frame):
             sensors = self.panelLoading.getSensors()
             port = self.panelLoading.getPort()
             self.panelLoading.Destroy()
-        self.panelGauges = CarberryObdPanelGauges(self)
+        self.panelGauges = CarberryPanelGauges(self)
         
         if connection:
             self.panelGauges.set_connection(connection)
@@ -471,15 +471,13 @@ class InitialFrame(wx.Frame):
         dc.DrawBitmap(self.bitmap, 0, 0)
 
 
-class OBDApp(wx.App):
+class CarberryApp(wx.App):
     """
-    OBD Application.
+    Carberry Application.
     """
 
     def __init__(self, redirect=False, filename=None, useBestVisual=False, clearSigInt=True):
-        """
-        Constructor.
-        """
+
         wx.App.__init__(self, redirect, filename, useBestVisual, clearSigInt)
 
     def OnInit(self):
@@ -487,7 +485,7 @@ class OBDApp(wx.App):
         Initializer.
         """
         # Main frame                                           
-        frame = OBDFrame()
+        frame = CarberryFrame()
         self.SetTopWindow(frame)
         frame.ShowFullScreen(True)
         frame.Show(True)
@@ -498,5 +496,5 @@ class OBDApp(wx.App):
         if event.GetEventType == wx.KeyEvent:
             pass
 
-app = OBDApp(False)
+app = CarberryApp(False)
 app.MainLoop()

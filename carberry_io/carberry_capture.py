@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from utils.carberry_utils import scan_serial
-from carberry_io import OBDPort
+from carberry_io import CarberryObdPort
 import time
 import carberry_sensors
 
@@ -16,7 +16,7 @@ class CarberryObdCapture:
         portnames = scan_serial()
         print portnames
         for port in portnames:
-            self.port = OBDPort(port, None, 2, 2)
+            self.port = CarberryObdPort(port, None, 2)
             if(self.port.State == 0):
                 self.port.close()
                 self.port = None

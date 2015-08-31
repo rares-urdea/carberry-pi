@@ -47,68 +47,71 @@ def decrypt_dtc_code(code):
     return dtc
 
 
-class OBDPort:
-     """ OBDPort abstracts all communication with OBD-II device."""
-     def __init__(self,portnum,_notify_window,SERTIMEOUT,RECONNATTEMPTS):
-         """Initializes port by resetting device and gettings supported PIDs. """
-         # These should really be set by the user.
-         baud     = 38400
+class CarberryObdPort:
+     """ CarberryObdPort abstracts all communication with OBD-II device."""
+
+     def __init__(self, portnum, notify_window, SERTIMEOUT):
+         """Initializes port by resetting the device and gettings supported PIDs. """
+
+         baud = 38400
          databits = 8
-         par      = serial.PARITY_NONE  # parity
-         sb       = 1                   # stop bits
-         to       = SERTIMEOUT
-         self.ELMver = "Unknown"
-         self.State = 1 #state SERIAL is 1 connected, 0 disconnected (connection failed)
+         parity = serial.PARITY_NONE
+         stop_bits = 1
+         to = SERTIMEOUT
+         self.elm_version = "Unknown"
+
+         #state SERIAL is 1 connected, 0 disconnected (connection failed)
+         self.state = 1
          self.port = None
          
-         self._notify_window=_notify_window
-         debug_display(self._notify_window, 1, "Opening interface (serial port)")
+         self.notify_window = notify_window
+         debug_display(self.notify_window, 1, "Opening interface (serial port)")
 
          try:
-             self.port = serial.Serial(portnum, baud, parity=par, stopbits=sb, bytesize=databits, timeout=to)
+             self.port = serial.Serial(portnum, baud, parity=parity, stopbits=stop_bits, bytesize=databits, timeout=to)
              
          except serial.SerialException as e:
              print e
-             self.State = 0
+             self.state = 0
              return None
              
-         debug_display(self._notify_window, 1, "Interface successfully " + self.port.portstr + " opened")
-         debug_display(self._notify_window, 1, "Connecting to ECU...")
+         debug_display(self.notify_window, 1, "Interface " + self.port.portstr + "successfully opened")
+         debug_display(self.notify_window, 1, "Connecting to ECU...")
          
          try:
             self.send_command("atz")   # initialize
             time.sleep(1)
          except serial.SerialException:
-            self.State = 0
+            self.state = 0
             return None
             
-         self.ELMver = self.get_result()
-         if(self.ELMver is None):
-            self.State = 0
+         self.elm_version = self.get_result()
+         if(self.elm_version is None):
+            self.state = 0
             return None
          
-         debug_display(self._notify_window, 2, "atz response:" + self.ELMver)
+         debug_display(self.notify_window, 2, "atz response:" + self.elm_version)
          self.send_command("ate0")  # echo off
-         debug_display(self._notify_window, 2, "ate0 response:" + self.get_result())
+         debug_display(self.notify_window, 2, "ate0 response:" + self.get_result())
          self.send_command("0100")
          ready = self.get_result()
          
          if(ready is None):
-            self.State = 0
+            self.state = 0
             return None
             
-         debug_display(self._notify_window, 2, "0100 response:" + ready)
+         debug_display(self.notify_window, 2, "0100 response:" + ready)
          return None
               
      def close(self):
          """ Resets device and closes all associated filehandles"""
          
-         if (self.port!= None) and self.State==1:
+         if (self.port!= None) and self.state==1:
             self.send_command("atz")
             self.port.close()
          
          self.port = None
-         self.ELMver = "Unknown"
+         self.elm_version = "Unknown"
 
      def send_command(self, cmd):
          """Internal use only: not a public interface"""
@@ -153,7 +156,7 @@ class OBDPort:
          repeat_count = 0
          if self.port is not None:
              buffer = ""
-             while 1:
+             while True:
                  c = self.port.read(1)
                  if len(c) == 0:
                     if(repeat_count == 5):
@@ -167,20 +170,20 @@ class OBDPort:
                     
                  if c == ">":
                     break;
-                     
-                 if buffer != "" or c != ">": #if something is in buffer, add everything
+
+                 #if something is in the buffer, add it
+                 if buffer != "" or c != ">":
                     buffer = buffer + c
                     
-             #debug_display(self._notify_window, 3, "Get result:" + buffer)
              if(buffer == ""):
                 return None
              return buffer
          else:
-            debug_display(self._notify_window, 3, "NO self.port!")
+            debug_display(self.notify_window, 3, "NO self.port!")
          return None
 
      # get sensor value from command
-     def get_sensor_value(self,sensor):
+     def get_sensor_value(self, sensor):
          """Internal use only: not a public interface"""
          cmd = sensor.cmd
          self.send_command(cmd)
@@ -209,32 +212,7 @@ class OBDPort:
          for s in carberry_sensors.SENSORS:
              names.append(s.name)
          return names
-         
-     def get_tests_MIL(self):
-         statusText=["Unsupported", "Supported - Completed", "Unsupported", "Supported - Incomplete"]
 
-         #get values
-         statusRes = self.sensor(1)[1]
-
-         #translate values to text
-         statusTrans = []
-         
-         statusTrans.append(str(statusRes[0])) #DTCs
-         
-         if statusRes[1] == 0: #MIL
-            statusTrans.append("Off")
-         else:
-            statusTrans.append("On")
-            
-         for i in range(2,len(statusRes)): #Tests
-              statusTrans.append(statusText[statusRes[i]]) 
-         
-         return statusTrans
-          
-     #
-     # fixme: j1979 specifies that the program should poll until the number
-     # of returned DTCs matches the number indicated by a call to PID 01
-     #
      def get_dtc(self):
           """Returns a list of all pending DTC codes. Each element consists of
           a 2-tuple: (DTC code (string), Code description (string) )"""
