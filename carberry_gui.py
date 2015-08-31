@@ -12,8 +12,8 @@ BACKGROUND = "elementary.jpg"
 SMALL_LOGO = "car.png"
 
 
-def obd_connect(o):
-    o.connect()
+def obd_connect(object):
+    object.connect()
 
 
 class CarberryObdConnection(object):
@@ -281,9 +281,9 @@ class CarberryPanelGauges(wx.Panel):
         dc.DrawBitmap(self.bitmap, 0, 0)     
 
 
-class CarberryLoadingPanel(wx.Panel):
+class CarberryMainPanel(wx.Panel):
     """
-    Main panel for OBD application. 
+    Main panel.
 
     Show loading screen. Handle event from mouse/keyboard.
     """
@@ -292,7 +292,7 @@ class CarberryLoadingPanel(wx.Panel):
         """
         Constructor.
         """
-        super(CarberryLoadingPanel, self).__init__(*args, **kwargs)
+        super(CarberryMainPanel, self).__init__(*args, **kwargs)
 
         # Background image
         image = wx.Image(BACKGROUND)
@@ -319,7 +319,7 @@ class CarberryLoadingPanel(wx.Panel):
         self.SetAcceleratorTable(self.accel_tbl)
 
         # Connection
-        self.c = None
+        self.carberry_obd_connection = None
 
         # Sensors list
         self.sensors = []
@@ -328,7 +328,7 @@ class CarberryLoadingPanel(wx.Panel):
         self.port = None
 
     def getConnection(self):
-        return self.c
+        return self.carberry_obd_connection
 
     def showLoadingScreen(self):
         """
@@ -344,18 +344,18 @@ class CarberryLoadingPanel(wx.Panel):
 
         self.timer0 = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.connect, self.timer0)
-        self.timer0.Start(1000)
+        self.timer0.Start(500)
 
     def connect(self, event):
         if self.timer0:
             self.timer0.Stop()
 
         # Connection
-        self.c = CarberryObdConnection()
-        self.c.connect()
+        self.carberry_obd_connection = CarberryObdConnection()
+        self.carberry_obd_connection.connect()
         connected = False
         while not connected:
-            connected = self.c.is_connected()
+            connected = self.carberry_obd_connection.is_connected()
             self.textCtrl.Clear()
             self.textCtrl.AddText(" Trying to connect ..." + time.asctime())
             if connected: 
@@ -367,14 +367,16 @@ class CarberryLoadingPanel(wx.Panel):
         else:
             self.textCtrl.Clear()
             self.textCtrl.AddText(" Connected\n")
-            port_name = self.c.get_port_name()
+            port_name = self.carberry_obd_connection.get_port_name()
             if port_name:
                 self.textCtrl.AddText(" Failed Connection: " + port_name +"\n")
                 self.textCtrl.AddText(" Hold alt & esc to view terminal.")
 
-            self.textCtrl.AddText(str(self.c.get_output()))
-            self.sensors = self.c.get_sensors()
-            self.port = self.c.get_port()
+            self.textCtrl.AddText(str(self.carberry_obd_connection.get_output()))
+
+            #add a timer here to actually have time to see the list of supported sensors.
+            self.sensors = self.carberry_obd_connection.get_sensors()
+            self.port = self.carberry_obd_connection.get_port()
 
             self.GetParent().update(None)
 
@@ -394,10 +396,7 @@ class CarberryLoadingPanel(wx.Panel):
         dc.DrawBitmap(self.bitmap, 0, 0)
 
 
-class CarberryFrame(wx.Frame):
-    """
-    OBD frame.
-    """
+class CarberryMainFrame(wx.Frame):
 
     def __init__(self):
         """
@@ -411,20 +410,20 @@ class CarberryFrame(wx.Frame):
         self.bitmap = wx.BitmapFromImage(image) 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
 
-        self.panelLoading = CarberryLoadingPanel(self)
+        self.main_panel = CarberryMainPanel(self)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.Add(self.panelLoading, 1, wx.EXPAND)
+        self.sizer.Add(self.main_panel, 1, wx.EXPAND)
         self.SetSizer(self.sizer)
 
-        self.panelLoading.showLoadingScreen()
-        self.panelLoading.SetFocus()
+        self.main_panel.showLoadingScreen()
+        self.main_panel.SetFocus()
 
     def update(self, event):
-        if self.panelLoading:
-            connection = self.panelLoading.getConnection()
-            sensors = self.panelLoading.getSensors()
-            port = self.panelLoading.getPort()
-            self.panelLoading.Destroy()
+        if self.main_panel:
+            connection = self.main_panel.getConnection()
+            sensors = self.main_panel.getSensors()
+            port = self.main_panel.getPort()
+            self.main_panel.Destroy()
         self.panelGauges = CarberryPanelGauges(self)
         
         if connection:
@@ -485,10 +484,10 @@ class CarberryApp(wx.App):
         Initializer.
         """
         # Main frame                                           
-        frame = CarberryFrame()
-        self.SetTopWindow(frame)
-        frame.ShowFullScreen(True)
-        frame.Show(True)
+        main_frame = CarberryMainFrame()
+        self.SetTopWindow(main_frame)
+        main_frame.ShowFullScreen(True)
+        main_frame.Show(True)
 
         return True
 

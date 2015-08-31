@@ -99,7 +99,7 @@ def dtc_decrypt(code):
 def hex_to_bitstring(hex_str):
     bitstring = ""
     for i in hex_str:
-        # silly type safety, we don't want to eval random stuff
+        # silly type safety, we don't want to evaluate random stuff
         if type('') == type(i):
             v = eval("0x%s" % i)
             if v & 8:

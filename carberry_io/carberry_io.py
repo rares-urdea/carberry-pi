@@ -201,10 +201,10 @@ class CarberryObdPort:
      # return string of sensor name and value from sensor index
      def sensor(self, sensor_index):
          """Returns 3-tuple of given sensors. 3-tuple consists of
-         (Sensor Name (string), Sensor Value (string), Sensor Unit (string) ) """
+         (Sensor Name (string), Sensor Data (string), Sensor Unit (string) ) """
          sensor = carberry_sensors.SENSORS[sensor_index]
-         r = self.get_sensor_value(sensor)
-         return sensor.name, r, sensor.unit
+         sensor_data = self.get_sensor_value(sensor)
+         return sensor.name, sensor_data, sensor.unit
 
      def sensor_names(self):
          """Internal use only: not a public interface"""

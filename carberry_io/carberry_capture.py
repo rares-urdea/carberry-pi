@@ -59,7 +59,7 @@ class CarberryObdCapture:
         if(self.port is None):
             return None
 
-        #Loop until Ctrl C is pressed        
+        #Loop until Ctrl C is pressed
         localtime = datetime.now()
         current_time = str(localtime.hour)+":"+str(localtime.minute)+":"+str(localtime.second)+"."+str(localtime.microsecond)
         #log_string = current_time + "\n"
